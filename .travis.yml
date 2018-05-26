@@ -1,0 +1,67 @@
+language: bash
+
+sudo: required
+dist: trusty
+
+services:
+- docker
+
+env:
+- QEMU_VERSION="2.6.0" DEBIAN_VERSION='experimental'
+
+- QEMU_VERSION="2.6.0" DEBIAN_VERSION='jessie'
+- QEMU_VERSION="2.6.0" DEBIAN_VERSION='8.10'
+- QEMU_VERSION="2.6.0" DEBIAN_VERSION='8'
+- QEMU_VERSION="2.6.0" DEBIAN_VERSION='jessie-backports'
+- QEMU_VERSION="2.6.0" DEBIAN_VERSION='jessie-slim'
+- QEMU_VERSION="2.6.0" DEBIAN_VERSION='8.10-slim'
+- QEMU_VERSION="2.6.0" DEBIAN_VERSION='8-slim'
+
+- QEMU_VERSION="2.6.0" DEBIAN_VERSION='stable'
+- QEMU_VERSION="2.6.0" DEBIAN_VERSION='stable-backports'
+- QEMU_VERSION="2.6.0" DEBIAN_VERSION='stable-slim'
+
+- QEMU_VERSION="2.6.0" DEBIAN_VERSION='stretch'
+- QEMU_VERSION="2.6.0" DEBIAN_VERSION='9.4'
+- QEMU_VERSION="2.6.0" DEBIAN_VERSION='9'
+- QEMU_VERSION="2.6.0" DEBIAN_VERSION='latest'
+- QEMU_VERSION="2.6.0" DEBIAN_VERSION='stretch-backports'
+- QEMU_VERSION="2.6.0" DEBIAN_VERSION='stretch-slim'
+- QEMU_VERSION="2.6.0" DEBIAN_VERSION='9.4-slim'
+- QEMU_VERSION="2.6.0" DEBIAN_VERSION='9-slim'
+
+- QEMU_VERSION="2.6.0" DEBIAN_VERSION='wheezy'
+- QEMU_VERSION="2.6.0" DEBIAN_VERSION='7.11'
+- QEMU_VERSION="2.6.0" DEBIAN_VERSION='7'
+- QEMU_VERSION="2.6.0" DEBIAN_VERSION='wheezy-backports'
+- QEMU_VERSION="2.6.0" DEBIAN_VERSION='wheezy-slim'
+- QEMU_VERSION="2.6.0" DEBIAN_VERSION='7.11-slim'
+- QEMU_VERSION="2.6.0" DEBIAN_VERSION='7-slim'
+
+
+script:
+# prepare qemu
+- docker run --rm --privileged multiarch/qemu-user-static:register --reset
+
+# get qemu-arm-static binary
+- mkdir tmp
+- >
+  pushd tmp &&
+  curl -L -o qemu-arm-static.tar.gz https://github.com/multiarch/qemu-user-static/releases/download/v${QEMU_VERSION}/qemu-arm-static.tar.gz &&
+  tar xzf qemu-arm-static.tar.gz &&
+  popd
+# Replace debian version with travis env variable
+- sed -i "s/latest/${DEBIAN_VERSION}/g" Dockerfile
+# build image
+- docker build -t ckaserer/debian:${DEBIAN_VERSION} .
+# test image
+- docker run ckaserer/debian:${DEBIAN_VERSION} uname -a
+# push image
+- >
+  if [ "$TRAVIS_BRANCH" == "master" ]; then
+    echo "${DOCKER_PASS}" | docker login -u "${DOCKER_USER}" --password-stdin
+    docker push ckaserer/debian
+  fi
+
+#after_script:
+#- "curl -X POST https://hooks.microbadger.com/images/ckaserer/debian/-QVKg7-ij2ceJ1jpMA7Zs-Z9Mig="
